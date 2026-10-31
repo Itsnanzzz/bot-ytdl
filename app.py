@@ -20,9 +20,11 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN tidak ditemukan di file .env")
 
-DOWNLOAD_DIR = "downloads"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 MAX_FILE_SIZE_MB = 48
-COOKIES_FILE = "cookies.txt"
+COOKIES_FILE = os.path.join(BASE_DIR, "cookies.txt")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -33,39 +35,60 @@ logger = logging.getLogger(__name__)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # ================== FUNGSI DOWNLOAD ==================
+
 def download_audio(url: str) -> tuple[str | None, str | None]:
     ydl_opts = {
         "format": "bestaudio/best",
-        "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
+        "outtmpl": os.path.join(
+            DOWNLOAD_DIR, "%(id)s.%(ext)s"
+        ),
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
             "preferredquality": "320",
         }],
         "quiet": True,
-        "no_warnings": True,
+        "no_warnings": False,
         "noplaylist": True,
+        "retries": 3,
+        "extractor_retries": 3,
+        "socket_timeout": 30,
     }
 
-    # Gunakan cookies jika tersedia
-    if os.path.exists(COOKIES_FILE):
+    # Gunakan Deno untuk JavaScript YouTube
+    ydl_opts["js_runtimes"] = {
+        "deno": {}
+    }
+
+    # Gunakan cookies dengan lokasi absolut
+    if os.path.isfile(COOKIES_FILE):
         ydl_opts["cookiefile"] = COOKIES_FILE
+        logger.info("Cookies ditemukan dan digunakan.")
     else:
-        logger.warning("File cookies.txt tidak ditemukan!")
+        logger.warning(
+            "cookies.txt tidak ditemukan: %s",
+            COOKIES_FILE
+        )
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
+
             title = info.get("title", "Unknown")
             filename = ydl.prepare_filename(info)
+
             mp3_path = os.path.splitext(filename)[0] + ".mp3"
 
-            if os.path.exists(mp3_path):
+            if os.path.isfile(mp3_path):
                 return mp3_path, title
-            elif os.path.exists(filename):
+
+            if os.path.isfile(filename):
                 return filename, title
+
             return None, "File gagal dibuat setelah download."
+
     except Exception as e:
+        logger.exception("Download gagal")
         return None, str(e)
 
 # ================== HANDLER ==================
