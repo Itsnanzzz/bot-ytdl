@@ -35,46 +35,52 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # ================== FUNGSI DOWNLOAD ==================
 def download_audio(url: str, format_choice: str) -> tuple[str | None, str | None]:
+    cookies_file = "cookies.txt"  # Pastikan file ini ada di folder yang sama
+
+    base_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
+    }
+
+    # Gunakan cookies jika file tersedia
+    if os.path.exists(cookies_file):
+        base_opts["cookiefile"] = cookies_file
+    else:
+        logger.warning("File cookies.txt tidak ditemukan! Download mungkin gagal.")
+
     if format_choice == "mp3":
         ydl_opts = {
+            **base_opts,
             "format": "bestaudio/best",
-            "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
                 "preferredquality": "320",
             }],
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
         }
         ext = "mp3"
 
     elif format_choice == "m4a":
         ydl_opts = {
+            **base_opts,
             "format": "bestaudio[ext=m4a]/bestaudio/best",
-            "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "m4a",
             }],
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
         }
         ext = "m4a"
 
     elif format_choice == "flac":
         ydl_opts = {
+            **base_opts,
             "format": "bestaudio/best",
-            "outtmpl": os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s"),
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "flac",
             }],
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
         }
         ext = "flac"
 
