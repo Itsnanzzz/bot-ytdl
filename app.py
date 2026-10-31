@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -13,11 +14,17 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 import yt_dlp
 
-# ================== KONFIGURASI ==================
-BOT_TOKEN = "8465571850:AAG49wKlpCllN63mKKrXiD6Gz6QRt43FKHI"
+# ================== LOAD ENV ==================
+load_dotenv()  # Load dari file .env
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN tidak ditemukan di file .env")
+
 DOWNLOAD_DIR = "downloads"
 MAX_FILE_SIZE_MB = 48
 
+# Setup logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
@@ -28,10 +35,6 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # ================== FUNGSI DOWNLOAD ==================
 def download_audio(url: str, format_choice: str) -> tuple[str | None, str | None]:
-    """
-    Download audio sesuai pilihan format.
-    Return: (path_file, judul) atau (None, error_message)
-    """
     if format_choice == "mp3":
         ydl_opts = {
             "format": "bestaudio/best",
@@ -87,11 +90,9 @@ def download_audio(url: str, format_choice: str) -> tuple[str | None, str | None
 
             if os.path.exists(final_path):
                 return final_path, title
-            else:
-                # Kadang file masih pakai ekstensi asli
-                if os.path.exists(filename):
-                    return filename, title
-                return None, "File gagal dibuat setelah download."
+            elif os.path.exists(filename):
+                return filename, title
+            return None, "File gagal dibuat setelah download."
     except Exception as e:
         return None, str(e)
 
@@ -126,7 +127,6 @@ async def handle_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Link tidak valid. Kirim link YouTube yang benar.")
         return
 
-    # Simpan URL di user_data
     context.user_data["url"] = url
 
     keyboard = [
@@ -153,7 +153,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not data.startswith("format_"):
         return
 
-    format_choice = data.replace("format_", "")  # mp3 / m4a / flac
+    format_choice = data.replace("format_", "")
     url = context.user_data.get("url")
 
     if not url:
@@ -166,7 +166,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "flac": "FLAC Lossless"
     }.get(format_choice, format_choice)
 
-    await query.edit_message_text(f"⏳ Sedang mendownload dalam format *{format_name}*...\nMohon tunggu.", parse_mode=ParseMode.MARKDOWN)
+    await query.edit_message_text(
+        f"⏳ Sedang mendownload dalam format *{format_name}*...\nMohon tunggu.",
+        parse_mode=ParseMode.MARKDOWN
+    )
 
     try:
         loop = asyncio.get_event_loop()
@@ -189,7 +192,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("📤 Mengirim file...")
 
         with open(file_path, "rb") as audio_file:
-            # Kirim sebagai audio supaya bisa diputar langsung di Telegram
             await context.bot.send_audio(
                 chat_id=query.message.chat_id,
                 audio=audio_file,
@@ -210,7 +212,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 os.remove(file_path)
             except:
                 pass
-        # Bersihkan URL
         context.user_data.pop("url", None)
 
 # ================== MAIN ==================
