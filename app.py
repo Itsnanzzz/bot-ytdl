@@ -14,7 +14,7 @@ from telegram.constants import ParseMode
 import yt_dlp
 
 # ================== KONFIGURASI ==================
-BOT_TOKEN = "GANTI_DENGAN_TOKEN_BOT_KAMU"
+BOT_TOKEN = "8465571850:AAG49wKlpCllN63mKKrXiD6Gz6QRt43FKHI"
 DOWNLOAD_DIR = "downloads"
 MAX_FILE_SIZE_MB = 48
 
