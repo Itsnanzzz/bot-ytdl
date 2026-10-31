@@ -1,0 +1,11 @@
+/.env
+/env
+/venv
+/dist
+/build
+/*.egg-info
+/*.pyc
+/*.pyo
+/*.pyd
+/*.pyw
+/__.py
